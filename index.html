@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>조이고 뉴스 모바일</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/3wVmDtDM/daunlodeu.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+        :root {
+            --joygo-blue: #2a2ef2; /* 요청하신 진한 파랑 */
+            --bg-page: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-main: #1a1a1a;
+            --text-muted: #666;
+            --border: #eeeeee;
+            --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        [data-theme='dark'] {
+            --bg-page: #121212;
+            --bg-secondary: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #aaa;
+            --border: #333333;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background-color: var(--bg-page); 
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* --- 상단 진한 파랑 섹션 --- */
+        .mobile-header {
+            background-color: var(--joygo-blue);
+            padding: 20px 20px 25px 20px;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+
+        .menu-btn {
+            position: absolute; left: 15px; top: 25px;
+            background: none; border: none; color: white;
+            font-size: 24px; cursor: pointer;
+        }
+
+        .login-btn-top {
+            position: absolute; right: 15px; top: 25px;
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold;
+        }
+        .user-profile-img {
+            position: absolute; right: 15px; top: 20px;
+            width: 32px; height: 32px; border-radius: 50%; border: 2px solid white;
+        }
+
+        .mobile-logo { height: 40px; margin-bottom: 20px; filter: brightness(0) invert(1); }
+
+        .search-wrapper {
+            max-width: 100%;
+            position: relative;
+            margin-bottom: 12px;
+        }
+        .mobile-search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* 실시간 롤링 인기 검색어 UI */
+        .rolling-search-container {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            height: 30px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        .rolling-label {
+            font-size: 11px;
+            font-weight: 900;
+            margin-right: 10px;
+            color: #ffeb3b;
+            flex-shrink: 0;
+        }
+        .rolling-box {
+            flex: 1;
+            height: 30px;
+            position: relative;
+        }
+        .rolling-item {
+            position: absolute;
+            width: 100%;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: transform 0.5s ease, opacity 0.5s ease;
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        .rolling-item.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .rolling-item.prev {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        .rolling-rank {
+            font-weight: 900;
+            margin-right: 8px;
+            color: white;
+        }
+
+        .info-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .info-top { display: flex; justify-content: center; gap: 15px; font-weight: bold; }
+
+        /* --- 콘텐츠 영역 --- */
+        .content-area {
+            background-color: var(--bg-page);
+            border-top-left-radius: 25px;
+            border-top-right-radius: 25px;
+            margin-top: -20px;
+            padding: 25px 20px;
+            min-height: 600px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .section-title { font-size: 18px; font-weight: 900; margin-bottom: 15px; border-left: 4px solid var(--joygo-blue); padding-left: 10px; }
+
+        .m-news-card {
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+        }
+        .m-video { width: 100%; aspect-ratio: 16/9; background: #000; pointer-events: none; }
+        .m-news-info { padding: 15px; }
+        .m-news-info h3 { margin: 0 0 10px 0; font-size: 16px; line-height: 1.4; }
+        .m-news-meta { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; }
+
+        /* 사이드 메뉴 */
+        .drawer {
+            position: fixed; top: 0; left: -280px; width: 280px; height: 100%;
+            background: var(--bg-page); z-index: 2000;
+            transition: left 0.3s ease;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .drawer.active { left: 0; }
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1999; display: none;
+        }
+        .drawer-overlay.active { display: block; }
+        .drawer-menu { list-style: none; padding: 0; margin-top: 30px; flex-grow: 1; }
+        .drawer-menu li { padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .drawer-menu li a { text-decoration: none; color: var(--text-main); font-weight: bold; display: block; }
+
+        /* 테마 전환 버튼 컨테이너 */
+        .drawer-footer {
+            margin-top: auto;
+            padding-bottom: 20px;
+        }
+
+        #detailView { display: none; }
+        .back-btn { background: none; border: none; font-weight: bold; margin-bottom: 15px; cursor: pointer; color: var(--joygo-blue); }
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 12px; z-index: 3000; display: none; }
+    </style>
+</head>
+<body data-theme="light">
+
+    <div class="drawer-overlay" id="overlay"></div>
+    <div class="drawer" id="drawer">
+        <h2 style="color:var(--joygo-blue)">메뉴</h2>
+        <ul class="drawer-menu">
+            <li><a href="#" onclick="closeDrawer()">홈으로</a></li>
+            <li><a href="https://www.joygonews.uk/jebo" target="_blank">뉴스 제보하기</a></li>
+            <li><a href="https://m.joygonews.uk/weather" target="_blank">전국 날씨보기</a></li>
+            <li><a href="https://padlet.com/koreacomsearch/padlet-2ik5nqjo7y4q1qoh" target="_blank">독자 게시판</a></li>
+            <li><a href="https://www.joygonews.uk" style="color: var(--joygo-blue);">PC버전으로 보기</a></li>
+        </ul>
+        <div class="drawer-footer">
+            <button id="mThemeToggle" style="width:100%; border:none; background:var(--joygo-blue); color:white; padding:12px; border-radius:8px; font-weight:bold;">테마 전환</button>
+            <p style="margin-top:20px; font-size:11px; color:var(--text-muted); text-align: center;">© 2024 JoyGO News</p>
+        </div>
+    </div>
+
+    <div class="mobile-header">
+        <button class="menu-btn" onclick="openDrawer()">☰</button>
+        <div id="mAuthBtn">
+            <button class="login-btn-top" onclick="window.login()">로그인</button>
+        </div>
+        
+        <img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" class="mobile-logo" onclick="location.reload()">
+        
+        <div class="search-wrapper">
+            <input type="text" id="mSearchInput" class="mobile-search-input" placeholder="뉴스를 검색해보세요" autocomplete="off">
+        </div>
+
+        <!-- 3초 롤링 인기 검색어 -->
+        <div class="rolling-search-container" id="rollingContainer">
+            <div class="rolling-label">인기</div>
+            <div class="rolling-box" id="rollingBox">
+                <div class="rolling-item active">인기 순위를 불러오는 중...</div>
+            </div>
+        </div>
+
+        <div class="info-bar">
+            <div class="info-top">
+                <span id="mDate">0000.00.00</span>
+                <span id="mTime" style="color:#ffeb3b">00:00:00</span>
+            </div>
+            <div id="mWeather">서울 날씨 로딩 중...</div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="listView">
+            <div class="section-title">오늘의 뉴스</div>
+            <div id="mNewsGrid"></div>
+        </div>
+
+        <div id="detailView">
+            <button class="back-btn" onclick="closeDetail()">← 뒤로가기</button>
+            <div id="mDetailContent"></div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, query, orderBy, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
+            authDomain: "joygonews318.firebaseapp.com",
+            projectId: "joygonews318",
+            storageBucket: "joygonews318.firebasestorage.app",
+            appId: "1:18066193272:web:8a5e0e8e8a82d3e870e68d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let allNews = [];
+        let popularNews = [];
+        let rollingIndex = 0;
+        let rollingInterval = null;
+
+        window.login = () => signInWithPopup(auth, provider);
+        
+        window.openDrawer = () => {
+            document.getElementById('drawer').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        };
+        window.closeDrawer = () => {
+            document.getElementById('drawer').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        };
+        document.getElementById('overlay').onclick = window.closeDrawer;
+
+        document.getElementById('mThemeToggle').onclick = () => {
+            const body = document.body;
+            const target = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', target);
+            localStorage.setItem('theme', target);
+        };
+
+        async function loadNews() {
+            try {
+                const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
+                const snap = await getDocs(q);
+                allNews = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                popularNews = [...allNews].sort((a,b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
+                renderList();
+                initRollingSearch();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderList(filtered = null) {
+            const grid = document.getElementById('mNewsGrid');
+            const data = filtered || allNews;
+            grid.innerHTML = '';
+            data.forEach(news => {
+                const card = document.createElement('div');
+                card.className = 'm-news-card';
+                card.onclick = () => showDetail(news.id);
+                card.innerHTML = `
+                    <div class="m-video"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${news.youtubeId}?controls=0"></iframe></div>
+                    <div class="m-news-info">
+                        <h3>${news.title}</h3>
+                        <div class="m-news-meta">
+                            <span>${news.author || '조이고'}</span>
+                            <span>조회수 ${news.views || 0}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 인기 검색어 롤링 기능
+        function initRollingSearch() {
+            const box = document.getElementById('rollingBox');
+            if(popularNews.length === 0) return;
+            
+            box.innerHTML = popularNews.map((n, i) => `
+                <div class="rolling-item ${i === 0 ? 'active' : ''}" onclick="window.handleRollingClick('${n.id}', '${n.title}')">
+                    <span class="rolling-rank">${i+1}</span> ${n.title}
+                </div>
+            `).join('');
+
+            if(rollingInterval) clearInterval(rollingInterval);
+            rollingInterval = setInterval(() => {
+                const items = box.querySelectorAll('.rolling-item');
+                if(items.length < 1) return;
+                
+                items[rollingIndex].classList.remove('active');
+                items[rollingIndex].classList.add('prev');
+                
+                rollingIndex = (rollingIndex + 1) % items.length;
+                
+                items[rollingIndex].classList.remove('prev');
+                items[rollingIndex].classList.add('active');
+                
+                // 이전 아이템 초기화
+                setTimeout(() => {
+                    const prevIdx = (rollingIndex - 1 + items.length) % items.length;
+                    items[prevIdx].classList.remove('prev');
+                }, 500);
+            }, 3000);
+        }
+
+        window.handleRollingClick = (id, title) => {
+            document.getElementById('mSearchInput').value = title;
+            showDetail(id);
+        };
+
+        async function showDetail(id) {
+            const listView = document.getElementById('listView');
+            const detailView = document.getElementById('detailView');
+            const content = document.getElementById('mDetailContent');
+            listView.style.display = 'none';
+            detailView.style.display = 'block';
+            window.scrollTo(0,0);
+            
+            const newsRef = doc(db, "news", id);
+            if (!sessionStorage.getItem(`viewed_m_${id}`)) {
+                await updateDoc(newsRef, { views: increment(1) });
+                sessionStorage.setItem(`viewed_m_${id}`, 'true');
+            }
+            const snap = await getDoc(newsRef);
+            if(snap.exists()) {
+                const d = snap.data();
+                content.innerHTML = `
+                    <h2 style="margin-top:0">${d.title}</h2>
+                    <p style="color:gray; font-size:12px;">조회수 ${d.views || 0} | ${d.author || '조이고'}</p>
+                    <div style="aspect-ratio:16/9; margin-bottom:20px;"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${d.youtubeId}"></iframe></div>
+                    <div style="line-height:1.7; white-space:pre-wrap;">${d.content}</div>
+                `;
+            }
+        }
+
+        window.closeDetail = () => {
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('detailView').style.display = 'none';
+        };
+
+        document.getElementById('mSearchInput').oninput = (e) => {
+            const val = e.target.value.toLowerCase();
+            renderList(allNews.filter(n => n.title.toLowerCase().includes(val)));
+        };
+
+        window.onload = () => {
+            loadNews();
+            if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('mDate').innerText = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+                document.getElementById('mTime').innerText = now.toLocaleTimeString();
+            }, 1000);
+            fetchWeather();
+        };
+
+        async function fetchWeather() {
+            try {
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=f9588dfba7000b48e2a636ba0ded59c5&units=metric&lang=kr`);
+                const data = await res.json();
+                document.getElementById('mWeather').innerText = `서울 ${Math.round(data.main.temp)}°C, ${data.weather[0].description}`;
+            } catch(e) {}
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            const area = document.getElementById('mAuthBtn');
+            if(user) area.innerHTML = `<img src="${user.photoURL}" class="user-profile-img" onclick="confirm('로그아웃?') && signOut(auth)">`;
+            else area.innerHTML = `<button class="login-btn-top" onclick="window.login()">로그인</button>`;
+        });
+    </script>
+</body>
+</html>
