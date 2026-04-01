@@ -136,6 +136,11 @@
         .ai-bubble.user { background: var(--joygo-blue); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .ai-input-area { padding: 15px; background: var(--bg-page); border-top: 1px solid var(--border); display: flex; gap: 10px; }
         .ai-input { flex: 1; border: 1px solid var(--border); padding: 12px; border-radius: 20px; outline: none; background: var(--bg-secondary); color: var(--text-main); }
+
+        /* 검색 결과 없음 보너스 스타일 */
+        .no-result-container { text-align: center; padding: 50px 20px; }
+        .external-search-link { color: var(--joygo-blue); font-weight: 900; text-decoration: underline; cursor: pointer; font-size: 16px; display: inline-block; margin-top: 15px; }
+        #googleSearchArea { margin-top: 20px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: none; background: white; }
     </style>
 </head>
 <body data-theme="light">
@@ -145,7 +150,6 @@
         <h2 style="color:var(--joygo-blue); margin-top: 0;">메뉴</h2>
         <ul style="list-style:none; padding:0; margin-top:30px; flex-grow:1;">
             <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="#" onclick="closeDrawer()" style="text-decoration:none; color:var(--text-main); font-weight:bold;">홈으로</a></li>
-            <!-- 뭉탱이 지능 메뉴 추가 -->
             <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="#" onclick="openAI()" style="text-decoration:none; color:var(--joygo-blue); font-weight:900;">🤖 뭉탱이 지능 (학습형)</a></li>
             <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="https://www.joygonews.uk/jebo" target="_blank" style="text-decoration:none; color:var(--text-main); font-weight:bold;">뉴스 제보하기</a></li>
             <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="https://m.joygonews.uk/weather" target="_blank" style="text-decoration:none; color:var(--text-main); font-weight:bold;">전국 날씨보기</a></li>
@@ -156,7 +160,6 @@
         </div>
     </div>
 
-    <!-- 뭉탱이 지능 AI 모달 추가 -->
     <div id="aiModal" class="ai-modal">
         <div class="ai-header">
             <span>🤖 뭉탱이 지능</span>
@@ -203,6 +206,10 @@
         <div id="listView">
             <div class="section-title">오늘의 뉴스</div>
             <div id="mNewsGrid"></div>
+            <!-- Google 검색 활성화 영역 -->
+            <div id="googleSearchArea">
+                <div class="gcse-search"></div>
+            </div>
         </div>
 
         <div id="detailView">
@@ -248,6 +255,7 @@
         let commentUnsubscribe = null;
         let currentNewsId = null;
         let replyUnsubscribes = {};
+        let isGCSEScriptLoaded = false;
 
         window.login = () => signInWithPopup(auth, provider).catch(e => console.error(e));
         
@@ -260,7 +268,6 @@
             document.getElementById('overlay').classList.remove('active');
         };
 
-        // --- 뭉탱이 지능 AI 함수 ---
         window.openAI = () => {
             closeDrawer();
             document.getElementById('aiModal').style.display = 'flex';
@@ -275,13 +282,10 @@
             const q = input.value.trim();
             if(!q) return;
 
-            // 유저 말풍선 추가
             addChatBubble('user', q);
             input.value = '';
 
             try {
-                // Firestore에서 답변 조회 (심심이 방식)
-                // 질문의 공백을 제거하고 ID로 사용
                 const cleanQ = q.replace(/\s/g, "");
                 const docRef = doc(db, "kane_brain", cleanQ);
                 const snap = await getDoc(docRef);
@@ -289,7 +293,6 @@
                 if (snap.exists()) {
                     addChatBubble('kane', snap.data().answer);
                 } else {
-                    // 답변이 없을 때 학습 유도
                     if (!currentUser) {
                         addChatBubble('kane', "아이고~! 그건 모르겠는데 로그인을 안 해서 가르쳐 줄 수가 없구먼! 👃");
                         return;
@@ -322,7 +325,6 @@
             chatArea.scrollTop = chatArea.scrollHeight;
         }
 
-        // --- 기존 뉴스/댓글 로직 ---
         async function loadNews() {
             try {
                 const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
@@ -341,10 +343,25 @@
             } catch(e) { console.error(e); }
         }
 
+        // 검색 결과 렌더링 (Google 맞춤검색 로직 포함)
         function renderList(filtered = null) {
             const grid = document.getElementById('mNewsGrid');
+            const googleArea = document.getElementById('googleSearchArea');
             const data = filtered || allNews;
+            
             grid.innerHTML = '';
+            googleArea.style.display = 'none';
+
+            if (data.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-result-container">
+                        <div style="font-size: 15px; color: var(--text-muted);">검색 결과가 없구먼...</div>
+                        <div class="external-search-link" onclick="window.activateGoogleSearch()">외부 사이트에서 케인인님를! 찾아보는 나</div>
+                    </div>
+                `;
+                return;
+            }
+
             data.forEach(news => {
                 const thumbUrl = `https://img.youtube.com/vi/${news.youtubeId}/hqdefault.jpg`;
                 const card = document.createElement('div');
@@ -367,6 +384,26 @@
                 grid.appendChild(card);
             });
         }
+
+        // Google 검색 스크립트 활성화 함수
+        window.activateGoogleSearch = () => {
+            const googleArea = document.getElementById('googleSearchArea');
+            googleArea.style.display = 'block';
+            
+            if (!isGCSEScriptLoaded) {
+                const script = document.createElement('script');
+                script.async = true;
+                script.src = "https://cse.google.com/cse.js?cx=35957b54a801a49f7";
+                document.head.appendChild(script);
+                isGCSEScriptLoaded = true;
+                showToast('Google 맞춤검색을 불러오고 있구먼!');
+            }
+            
+            // 검색어 자동 반영 (선택 사항: 현재 검색창의 값을 Google 검색창에 넣고 싶을 때)
+            const currentKeyword = document.getElementById('mSearchInput').value;
+            // GCSE가 로드된 후 검색어 실행은 GCSE API 가이드에 따라야 하지만, 
+            // 여기서는 유저가 직접 입력할 수 있도록 렌더링만 합니다.
+        };
 
         function initRollingSearch() {
             const box = document.getElementById('rollingBox');
@@ -666,7 +703,6 @@
             if (currentNewsId) loadComments(currentNewsId);
         });
 
-        // 검색 필터링 연동
         document.getElementById('mSearchInput').addEventListener('input', (e) => {
             const keyword = e.target.value.toLowerCase();
             const filtered = allNews.filter(n => n.title.toLowerCase().includes(keyword));
@@ -675,4 +711,5 @@
     </script>
 </body>
 </html>
+
 
