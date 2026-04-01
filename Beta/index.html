@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>조이고 뉴스 모바일</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/3wVmDtDM/daunlodeu.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+        :root {
+            --joygo-blue: #2a2ef2;
+            --bg-page: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-main: #1a1a1a;
+            --text-muted: #666;
+            --border: #eeeeee;
+            --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        [data-theme='dark'] {
+            --bg-page: #121212;
+            --bg-secondary: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #aaa;
+            --border: #333333;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background-color: var(--bg-page); 
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* --- 상단 헤더 --- */
+        .mobile-header {
+            background-color: var(--joygo-blue);
+            padding: 20px 20px 25px 20px;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        .menu-btn { position: absolute; left: 15px; top: 25px; background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+        .user-profile-img { position: absolute; right: 15px; top: 20px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; cursor: pointer; object-fit: cover; }
+        .login-btn-top { position: absolute; right: 15px; top: 25px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+        .mobile-logo { height: 40px; margin-bottom: 20px; filter: brightness(0) invert(1); cursor: pointer; }
+        
+        .search-wrapper { max-width: 100%; position: relative; margin-bottom: 12px; }
+        .mobile-search-input { width: 100%; padding: 12px 15px; border-radius: 8px; border: none; outline: none; font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* 인기 검색어 롤링 */
+        .rolling-search-container { background: rgba(255, 255, 255, 0.15); border-radius: 6px; height: 30px; overflow: hidden; display: flex; align-items: center; padding: 0 10px; margin-bottom: 15px; cursor: pointer; }
+        .rolling-label { font-size: 11px; font-weight: 900; margin-right: 10px; color: #ffeb3b; flex-shrink: 0; }
+        .rolling-box { flex: 1; height: 30px; position: relative; }
+        .rolling-item { position: absolute; width: 100%; height: 30px; display: flex; align-items: center; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: transform 0.5s ease, opacity 0.5s ease; transform: translateY(100%); opacity: 0; }
+        .rolling-item.active { transform: translateY(0); opacity: 1; }
+        .rolling-rank { font-weight: 900; margin-right: 8px; color: white; }
+
+        .info-bar { display: flex; flex-direction: column; gap: 3px; font-size: 12px; opacity: 0.9; }
+        .info-top { display: flex; justify-content: center; gap: 15px; font-weight: bold; }
+
+        /* --- 콘텐츠 영역 --- */
+        .content-area {
+            background-color: var(--bg-page);
+            border-top-left-radius: 25px;
+            border-top-right-radius: 25px;
+            margin-top: -20px;
+            padding: 25px 20px;
+            min-height: 600px;
+            position: relative;
+            z-index: 10;
+        }
+        .section-title { font-size: 18px; font-weight: 900; margin-bottom: 15px; border-left: 4px solid var(--joygo-blue); padding-left: 10px; }
+
+        .m-news-card { background: var(--bg-page); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: var(--card-shadow); cursor: pointer; position: relative; }
+        .m-thumbnail-container { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; }
+        .m-thumbnail-img { width: 100%; height: 100%; object-fit: cover; }
+        .play-icon-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .duration-badge { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.8); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; z-index: 5; }
+        
+        .m-news-info { padding: 15px; }
+        .m-news-info h3 { margin: 0 0 10px 0; font-size: 16px; line-height: 1.4; font-weight: 700; }
+        .m-news-meta { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
+
+        /* 상세 페이지 */
+        #detailView { display: none; }
+        .detail-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .back-btn { background: none; border: none; font-weight: bold; cursor: pointer; color: var(--joygo-blue); font-size: 16px; display: flex; align-items: center; gap: 5px; }
+        .share-link-btn { background: var(--bg-secondary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; color: var(--text-main); }
+
+        /* --- 댓글 섹션 --- */
+        .comment-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 20px; padding-bottom: 100px; }
+        .comment-header { font-size: 16px; font-weight: 900; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .comment-input-wrapper { background: var(--bg-secondary); border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .comment-textarea { width: 100%; height: 60px; background: transparent; border: none; outline: none; resize: none; font-family: inherit; font-size: 14px; color: var(--text-main); }
+        .comment-submit-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+        .comment-submit-btn { background: var(--joygo-blue); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
+
+        .comment-list { display: flex; flex-direction: column; gap: 10px; }
+        .comment-item { display: flex; gap: 12px; padding: 15px 12px; border-radius: 12px; border-bottom: 1px solid var(--border); transition: background 0.2s; position: relative; }
+        .comment-item.is-reply { margin-left: 30px; background: var(--bg-secondary); border-left: 3px solid var(--joygo-blue); border-bottom: none; }
+        .comment-user-img { width: 36px; height: 36px; border-radius: 50%; background: #eee; flex-shrink: 0; object-fit: cover; }
+        .comment-body { flex: 1; min-width: 0; }
+        .comment-user-info { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .comment-user-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+        .comment-date { font-size: 10px; color: var(--text-muted); }
+        .comment-text { font-size: 14px; line-height: 1.5; color: var(--text-main); white-space: pre-wrap; word-break: break-all; margin-top: 4px; }
+        
+        .comment-actions { margin-top: 10px; display: flex; gap: 15px; }
+        .action-btn { font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; color: var(--text-muted); font-weight: 600; }
+        .action-btn.reply-btn { color: var(--joygo-blue); }
+        .action-btn.report-btn { color: #f59e0b; }
+        .action-btn.delete-btn { color: #ef4444; }
+
+        .reply-container { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .reply-form-container { display: none; margin-top: 12px; }
+        .reply-form-container.active { display: block; }
+
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 30px; font-size: 13px; z-index: 5000; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        /* 사이드 메뉴 */
+        .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: var(--bg-page); z-index: 4000; transition: left 0.3s ease; box-shadow: 5px 0 15px rgba(0,0,0,0.1); padding: 40px 20px; display: flex; flex-direction: column; }
+        .drawer.active { left: 0; }
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3999; display: none; }
+        .drawer-overlay.active { display: block; }
+
+        /* --- 뭉탱이 지능 AI 모달 --- */
+        .ai-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-page); z-index: 5000; display: none; flex-direction: column; }
+        .ai-header { background: var(--joygo-blue); color: white; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; }
+        .ai-chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: var(--bg-secondary); }
+        .ai-bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; position: relative; }
+        .ai-bubble.kane { background: white; align-self: flex-start; border-bottom-left-radius: 2px; color: #111; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .ai-bubble.user { background: var(--joygo-blue); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai-input-area { padding: 15px; background: var(--bg-page); border-top: 1px solid var(--border); display: flex; gap: 10px; }
+        .ai-input { flex: 1; border: 1px solid var(--border); padding: 12px; border-radius: 20px; outline: none; background: var(--bg-secondary); color: var(--text-main); }
+    </style>
+</head>
+<body data-theme="light">
+
+    <div class="drawer-overlay" id="overlay"></div>
+    <div class="drawer" id="drawer">
+        <h2 style="color:var(--joygo-blue); margin-top: 0;">메뉴</h2>
+        <ul style="list-style:none; padding:0; margin-top:30px; flex-grow:1;">
+            <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="#" onclick="closeDrawer()" style="text-decoration:none; color:var(--text-main); font-weight:bold;">홈으로</a></li>
+            <!-- 뭉탱이 지능 메뉴 추가 -->
+            <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="#" onclick="openAI()" style="text-decoration:none; color:var(--joygo-blue); font-weight:900;">🤖 뭉탱이 지능 (학습형)</a></li>
+            <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="https://www.joygonews.uk/jebo" target="_blank" style="text-decoration:none; color:var(--text-main); font-weight:bold;">뉴스 제보하기</a></li>
+            <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="https://m.joygonews.uk/weather" target="_blank" style="text-decoration:none; color:var(--text-main); font-weight:bold;">전국 날씨보기</a></li>
+            <li style="padding:15px 0; border-bottom:1px solid var(--border);"><a href="https://padlet.com/koreacomsearch/padlet-2ik5nqjo7y4q1qoh" target="_blank" style="text-decoration:none; color:var(--text-main); font-weight:bold;">독자 게시판</a></li>
+        </ul>
+        <div style="margin-top:auto; padding-bottom:20px;">
+            <button id="mThemeToggle" style="width:100%; border:none; background:var(--joygo-blue); color:white; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">테마 전환</button>
+        </div>
+    </div>
+
+    <!-- 뭉탱이 지능 AI 모달 추가 -->
+    <div id="aiModal" class="ai-modal">
+        <div class="ai-header">
+            <span>🤖 뭉탱이 지능</span>
+            <button onclick="closeAI()" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">✕</button>
+        </div>
+        <div id="aiChatArea" class="ai-chat-area">
+            <div class="ai-bubble kane">아이고~! 나한테 궁금한 게 있으면 물어보구먼! 모르는 건 가르쳐주게나. 👃</div>
+        </div>
+        <div class="ai-input-area">
+            <input type="text" id="aiInputText" class="ai-input" placeholder="질문을 입력하세요..." onkeypress="if(event.keyCode==13) window.askKane()">
+            <button onclick="window.askKane()" style="background:var(--joygo-blue); color:white; border:none; width:40px; height:40px; border-radius:50%; font-weight:bold;">↑</button>
+        </div>
+    </div>
+
+    <div class="mobile-header">
+        <button class="menu-btn" onclick="openDrawer()">☰</button>
+        <div id="mAuthBtn">
+            <button class="login-btn-top" onclick="window.login()">로그인</button>
+        </div>
+        
+        <img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" class="mobile-logo" onclick="location.reload()">
+        
+        <div class="search-wrapper">
+            <input type="text" id="mSearchInput" class="mobile-search-input" placeholder="뉴스를 검색해보세요" autocomplete="off">
+        </div>
+
+        <div class="rolling-search-container" id="rollingContainer">
+            <div class="rolling-label">인기</div>
+            <div class="rolling-box" id="rollingBox">
+                <div class="rolling-item active">인기 순위를 불러오는 중...</div>
+            </div>
+        </div>
+
+        <div class="info-bar">
+            <div class="info-top">
+                <span id="mDate">0000.00.00</span>
+                <span id="mTime" style="color:#ffeb3b">00:00:00</span>
+            </div>
+            <div id="mWeather">날씨 로딩 중...</div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="listView">
+            <div class="section-title">오늘의 뉴스</div>
+            <div id="mNewsGrid"></div>
+        </div>
+
+        <div id="detailView">
+            <div class="detail-header-actions">
+                <button class="back-btn" onclick="closeDetail()">← 뒤로가기</button>
+                <button class="share-link-btn" onclick="copyCurrentLink()">링크 복사</button>
+            </div>
+            <div id="mDetailContent"></div>
+            
+            <div class="comment-section">
+                <div class="comment-header">댓글 <span id="commentCount">0</span></div>
+                <div id="commentAuthGuard"></div>
+                <div class="comment-list" id="commentList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, setDoc, query, orderBy, updateDoc, increment, addDoc, serverTimestamp, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
+            authDomain: "joygonews318.firebaseapp.com",
+            projectId: "joygonews318",
+            storageBucket: "joygonews318.firebasestorage.app",
+            appId: "1:18066193272:web:8a5e0e8e8a82d3e870e68d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let allNews = [];
+        let popularNews = [];
+        let rollingIndex = 0;
+        let rollingInterval = null;
+        let currentUser = null;
+        let commentUnsubscribe = null;
+        let currentNewsId = null;
+        let replyUnsubscribes = {};
+
+        window.login = () => signInWithPopup(auth, provider).catch(e => console.error(e));
+        
+        window.openDrawer = () => {
+            document.getElementById('drawer').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        };
+        window.closeDrawer = () => {
+            document.getElementById('drawer').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        };
+
+        // --- 뭉탱이 지능 AI 함수 ---
+        window.openAI = () => {
+            closeDrawer();
+            document.getElementById('aiModal').style.display = 'flex';
+        };
+        window.closeAI = () => {
+            document.getElementById('aiModal').style.display = 'none';
+        };
+
+        window.askKane = async () => {
+            const input = document.getElementById('aiInputText');
+            const chatArea = document.getElementById('aiChatArea');
+            const q = input.value.trim();
+            if(!q) return;
+
+            // 유저 말풍선 추가
+            addChatBubble('user', q);
+            input.value = '';
+
+            try {
+                // Firestore에서 답변 조회 (심심이 방식)
+                // 질문의 공백을 제거하고 ID로 사용
+                const cleanQ = q.replace(/\s/g, "");
+                const docRef = doc(db, "kane_brain", cleanQ);
+                const snap = await getDoc(docRef);
+
+                if (snap.exists()) {
+                    addChatBubble('kane', snap.data().answer);
+                } else {
+                    // 답변이 없을 때 학습 유도
+                    if (!currentUser) {
+                        addChatBubble('kane', "아이고~! 그건 모르겠는데 로그인을 안 해서 가르쳐 줄 수가 없구먼! 👃");
+                        return;
+                    }
+                    const newA = prompt(`'${q}'은(는) 모르겠구먼! 뭐라고 대답하면 좋겠나? (정성스럽게 가르쳐주게나!)`);
+                    if (newA && newA.trim()) {
+                        await setDoc(docRef, {
+                            answer: newA.trim(),
+                            author: currentUser.displayName || '익명',
+                            uid: currentUser.uid,
+                            createdAt: serverTimestamp()
+                        });
+                        addChatBubble('kane', "오케이! 방금 하나 배웠구먼. 다음엔 똑똑하게 답하겠네!");
+                    } else {
+                        addChatBubble('kane', "왜 안 가르쳐주나! 거러지 같은 질문만 하지 말고 좀 알려줘 봐!");
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                addChatBubble('kane', "에러 났구먼! 나중에 다시 물어보게.");
+            }
+        };
+
+        function addChatBubble(type, text) {
+            const chatArea = document.getElementById('aiChatArea');
+            const b = document.createElement('div');
+            b.className = `ai-bubble ${type}`;
+            b.innerText = text;
+            chatArea.appendChild(b);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // --- 기존 뉴스/댓글 로직 ---
+        async function loadNews() {
+            try {
+                const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
+                const snap = await getDocs(q);
+                allNews = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                popularNews = [...allNews].sort((a,b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
+                
+                const hash = window.location.hash;
+                if (hash.startsWith('#/news/')) {
+                    const idFromUrl = hash.replace('#/news/', '');
+                    showDetail(idFromUrl);
+                } else {
+                    renderList();
+                }
+                initRollingSearch();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderList(filtered = null) {
+            const grid = document.getElementById('mNewsGrid');
+            const data = filtered || allNews;
+            grid.innerHTML = '';
+            data.forEach(news => {
+                const thumbUrl = `https://img.youtube.com/vi/${news.youtubeId}/hqdefault.jpg`;
+                const card = document.createElement('div');
+                card.className = 'm-news-card';
+                card.onclick = () => showDetail(news.id);
+                card.innerHTML = `
+                    <div class="m-thumbnail-container">
+                        <img src="${thumbUrl}" class="m-thumbnail-img" loading="lazy">
+                        <div class="play-icon-overlay">▶</div>
+                        <div class="duration-badge">${news.duration || "00:00"}</div>
+                    </div>
+                    <div class="m-news-info">
+                        <h3>${news.title}</h3>
+                        <div class="m-news-meta">
+                            <span>${news.author || '조이고'}</span>
+                            <span>조회수 ${news.views || 0}회</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function initRollingSearch() {
+            const box = document.getElementById('rollingBox');
+            if(popularNews.length === 0) return;
+            box.innerHTML = popularNews.map((n, i) => `
+                <div class="rolling-item ${i === 0 ? 'active' : ''}" onclick="window.handleRollingClick('${n.id}', '${n.title.replace(/'/g, "\\'")}')">
+                    <span class="rolling-rank">${i+1}</span> ${n.title}
+                </div>
+            `).join('');
+            if(rollingInterval) clearInterval(rollingInterval);
+            rollingInterval = setInterval(() => {
+                const items = box.querySelectorAll('.rolling-item');
+                if(items.length < 2) return;
+                items[rollingIndex].classList.remove('active');
+                rollingIndex = (rollingIndex + 1) % items.length;
+                items[rollingIndex].classList.add('active');
+            }, 3000);
+        }
+
+        window.handleRollingClick = (id, title) => {
+            document.getElementById('mSearchInput').value = title;
+            showDetail(id);
+        };
+
+        window.copyCurrentLink = () => {
+            if (!currentNewsId) return;
+            const shareUrl = `https://joygonews.uk/#/news/${currentNewsId}`;
+            const tempInput = document.createElement('input');
+            document.body.appendChild(tempInput);
+            tempInput.value = shareUrl;
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast('뉴스 링크가 복사되었습니다.');
+        };
+
+        async function showDetail(id) {
+            currentNewsId = id;
+            window.location.hash = `#/news/${id}`;
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+            window.scrollTo(0,0);
+            
+            const newsRef = doc(db, "news", id);
+            if (!sessionStorage.getItem(`viewed_m_${id}`)) {
+                await updateDoc(newsRef, { views: increment(1) });
+                sessionStorage.setItem(`viewed_m_${id}`, 'true');
+            }
+            const snap = await getDoc(newsRef);
+            if(snap.exists()) {
+                const d = snap.data();
+                document.getElementById('mDetailContent').innerHTML = `
+                    <h2 style="margin-top:0; font-size:20px; line-height:1.4;">${d.title}</h2>
+                    <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:12px; margin-bottom:15px;">
+                        <span>${d.author || '조이고'} 기자</span>
+                        <span>조회수 ${d.views || 0}회</span>
+                    </div>
+                    <div style="aspect-ratio:16/9; margin-bottom:20px; border-radius:12px; overflow:hidden; background:#000;">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${d.youtubeId}" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                    <div style="line-height:1.8; white-space:pre-wrap; font-size:15px; color:var(--text-main);">${d.content}</div>
+                `;
+            }
+            loadComments(id);
+        }
+
+        window.closeDetail = () => {
+            if (commentUnsubscribe) commentUnsubscribe();
+            Object.values(replyUnsubscribes).forEach(unsub => unsub());
+            replyUnsubscribes = {};
+            currentNewsId = null;
+            window.location.hash = '';
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('detailView').style.display = 'none';
+            renderList();
+        };
+
+        function loadComments(newsId) {
+            const listEl = document.getElementById('commentList');
+            const countEl = document.getElementById('commentCount');
+            if (commentUnsubscribe) commentUnsubscribe();
+            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
+            commentUnsubscribe = onSnapshot(q, (snap) => {
+                countEl.innerText = snap.size;
+                listEl.innerHTML = '';
+                if (snap.empty) {
+                    listEl.innerHTML = '<p style="text-align:center; color:gray; font-size:13px; padding:30px 0;">댓글이 없습니다.</p>';
+                    return;
+                }
+                snap.forEach(ds => {
+                    const c = { id: ds.id, ...ds.data() };
+                    renderCommentItem(listEl, c);
+                });
+            });
+        }
+
+        function renderCommentItem(container, c) {
+            const item = document.createElement('div');
+            item.className = 'comment-item-group';
+            item.id = `comment-group-${c.id}`;
+            const photo = c.userImg || 'https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_96x96dp.png';
+            const dateStr = c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString('ko-KR') : '방금 전';
+            item.innerHTML = `
+                <div class="comment-item" id="c-${c.id}">
+                    <img src="${photo}" class="comment-user-img" onerror="this.src='https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_96x96dp.png'">
+                    <div class="comment-body">
+                        <div class="comment-user-info">
+                            <span class="comment-user-name">${c.userName || '익명'}</span>
+                            <span class="comment-date">${dateStr}</span>
+                        </div>
+                        <div class="comment-text">${c.text}</div>
+                        <div class="comment-actions">
+                            <button class="action-btn reply-btn" onclick="window.toggleReplyForm('${c.id}')">답글</button>
+                            <button class="action-btn report-btn" onclick="window.reportComment('${c.id}', 'comment')">신고</button>
+                            ${currentUser && currentUser.uid === c.uid ? `<button class="action-btn delete-btn" onclick="window.deleteComment('${c.id}')">삭제</button>` : ''}
+                        </div>
+                        <div id="rf-${c.id}" class="reply-form-container">
+                            <div class="comment-input-wrapper" style="margin-top:10px; background:white;">
+                                <textarea id="ri-${c.id}" class="comment-textarea" placeholder="답글을 남겨보세요..."></textarea>
+                                <div class="comment-submit-row">
+                                    <button class="comment-submit-btn" onclick="window.submitReply('${c.id}')">등록</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="reply-container" id="replies-${c.id}"></div>
+            `;
+            container.appendChild(item);
+            subscribeReplies(c.id);
+        }
+
+        function subscribeReplies(commentId) {
+            if (replyUnsubscribes[commentId]) replyUnsubscribes[commentId]();
+            const replyListEl = document.getElementById(`replies-${commentId}`);
+            const q = query(collection(db, "news", currentNewsId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
+            replyUnsubscribes[commentId] = onSnapshot(q, (snap) => {
+                replyListEl.innerHTML = '';
+                snap.forEach(ds => {
+                    const r = { id: ds.id, ...ds.data() };
+                    const rItem = document.createElement('div');
+                    rItem.className = 'comment-item is-reply';
+                    const photo = r.userImg || 'https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_96x96dp.png';
+                    const dateStr = r.createdAt ? new Date(r.createdAt.seconds * 1000).toLocaleString('ko-KR') : '방금 전';
+                    rItem.innerHTML = `
+                        <img src="${photo}" class="comment-user-img" onerror="this.src='https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_96x96dp.png'">
+                        <div class="comment-body">
+                            <div class="comment-user-info">
+                                <span class="comment-user-name">${r.userName || '익명'}</span>
+                                <span class="comment-date">${dateStr}</span>
+                            </div>
+                            <div class="comment-text">${r.text}</div>
+                            <div class="comment-actions">
+                                <button class="action-btn report-btn" onclick="window.reportComment('${r.id}', 'reply', '${commentId}')">신고</button>
+                                ${currentUser && currentUser.uid === r.uid ? `<button class="action-btn delete-btn" onclick="window.deleteReply('${commentId}', '${r.id}')">삭제</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    replyListEl.appendChild(rItem);
+                });
+            });
+        }
+
+        window.submitComment = async () => {
+            if (!currentUser) return alert('로그인이 필요합니다.');
+            const text = document.getElementById('commentInput').value.trim();
+            if (!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments"), {
+                    createdAt: serverTimestamp(),
+                    text: text,
+                    uid: currentUser.uid,
+                    userImg: currentUser.photoURL || '',
+                    userName: currentUser.displayName || '익명'
+                });
+                document.getElementById('commentInput').value = '';
+                showToast('댓글이 등록되었습니다.');
+            } catch (e) { console.error(e); }
+        };
+
+        window.submitReply = async (commentId) => {
+            if (!currentUser) return alert('로그인이 필요합니다.');
+            const inputEl = document.getElementById(`ri-${commentId}`);
+            const text = inputEl.value.trim();
+            if (!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
+                    createdAt: serverTimestamp(),
+                    text: text,
+                    uid: currentUser.uid,
+                    userImg: currentUser.photoURL || '',
+                    userName: currentUser.displayName || '익명'
+                });
+                inputEl.value = '';
+                document.getElementById(`rf-${commentId}`).classList.remove('active');
+                showToast('답글이 등록되었습니다.');
+            } catch (e) { console.error(e); }
+        };
+
+        window.deleteComment = async (cid) => {
+            if (!confirm('삭제하시겠습니까?')) return;
+            try {
+                await deleteDoc(doc(db, "news", currentNewsId, "comments", cid));
+                showToast('삭제되었습니다.');
+            } catch (e) { console.error(e); }
+        };
+
+        window.deleteReply = async (commentId, replyId) => {
+            if (!confirm('답글을 삭제하시겠습니까?')) return;
+            try {
+                await deleteDoc(doc(db, "news", currentNewsId, "comments", commentId, "replies", replyId));
+                showToast('삭제되었습니다.');
+            } catch (e) { console.error(e); }
+        };
+
+        window.toggleReplyForm = (id) => {
+            document.getElementById(`rf-${id}`).classList.toggle('active');
+        };
+
+        window.reportComment = async (id, type, commentId = null) => {
+            if (!currentUser) return alert('로그인 후 이용 가능합니다.');
+            const reason = prompt('신고 사유를 입력해주세요:');
+            if(!reason) return;
+            try {
+                await addDoc(collection(db, "reports"), {
+                    targetId: id,
+                    parentId: commentId,
+                    reporter: currentUser.uid,
+                    reason: reason,
+                    type: type,
+                    createdAt: serverTimestamp()
+                });
+                showToast('신고가 접수되었습니다.');
+            } catch (e) { console.error(e); }
+        };
+
+        function updateCommentUI(user) {
+            const guard = document.getElementById('commentAuthGuard');
+            if (user) {
+                guard.innerHTML = `
+                    <div class="comment-input-wrapper">
+                        <textarea id="commentInput" class="comment-textarea" placeholder="건전한 댓글 문화를 만들어주세요."></textarea>
+                        <div class="comment-submit-row">
+                            <button class="comment-submit-btn" onclick="window.submitComment()">등록</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                guard.innerHTML = `<div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;"><button class="comment-submit-btn" onclick="window.login()">로그인 후 댓글 작성</button></div>`;
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        window.onload = () => {
+            loadNews();
+            if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('mDate').innerText = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+                document.getElementById('mTime').innerText = now.toLocaleTimeString();
+            }, 1000);
+            fetchWeather();
+        };
+
+        window.onhashchange = () => {
+            const hash = window.location.hash;
+            if (!hash && currentNewsId) closeDetail();
+            else if (hash.startsWith('#/news/')) {
+                const idFromUrl = hash.replace('#/news/', '');
+                if (idFromUrl !== currentNewsId) showDetail(idFromUrl);
+            }
+        };
+
+        async function fetchWeather() {
+            try {
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=f9588dfba7000b48e2a636ba0ded59c5&units=metric&lang=kr`);
+                const data = await res.json();
+                document.getElementById('mWeather').innerText = `서울 ${Math.round(data.main.temp)}°C, ${data.weather[0].description}`;
+            } catch(e) {}
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const area = document.getElementById('mAuthBtn');
+            if(user) {
+                area.innerHTML = `<img src="${user.photoURL}" class="user-profile-img" onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)" onerror="this.src='https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_96x96dp.png'">`;
+            } else {
+                area.innerHTML = `<button class="login-btn-top" onclick="window.login()">로그인</button>`;
+            }
+            updateCommentUI(user);
+            if (currentNewsId) loadComments(currentNewsId);
+        });
+
+        // 검색 필터링 연동
+        document.getElementById('mSearchInput').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filtered = allNews.filter(n => n.title.toLowerCase().includes(keyword));
+            renderList(filtered);
+        });
+    </script>
+</body>
+</html>
+
